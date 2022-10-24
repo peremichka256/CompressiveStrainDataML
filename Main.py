@@ -1,81 +1,108 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
+import math
 from tensorflow import keras
 import numpy as np
 
+#ФУНКЦИИ АВТОЗАПОЛНЕНИЯ
+zero_tensor = tf.zeros((3, 3), tf.int8)
+print(zero_tensor)
 
-#Чаще всего тензоры можно понимать как константные неизменяемые
-# объекты. C использованием объекта constant, где
-# value - значение тензора
-# dtype - тип данных тензора
-# shape - размерность тензора
-# name - имя тензора
-#Скаляр
-a = tf.constant(1, shape=(1, 1))
-#Список
-b = tf.constant([1, 2, 3, 4])
-#Матрицы
-c = tf.constant([[1, 2],
-                 [2, 3],
-                 [3, 4]], dtype=tf.int8)
-#cast преобразует один тип данных в другой
-a_float = tf.cast(a, dtype=tf.float32)
+ones_tensor = tf.ones((4, 4),tf.int8)
+print(ones_tensor)
+
+#Единичные и нулевые матрицы по размерам
+# передаваемого тензора
+ones_like_tensor = tf.ones_like(zero_tensor)
+print(ones_like_tensor)
+
+zero_like_tensor = tf.zeros_like(ones_tensor)
+print(zero_like_tensor)
+
+#Тензор с единицами по диагонали
+diagonal_ones = tf.eye(4)
+print(diagonal_ones)
+
+#Копия тензора с сохранением значения
+copy_of_tensor = tf.identity(diagonal_ones)
+print(copy_of_tensor)
+
+#Формирование тензора с заданными значениями и размерностью
+filling_tensor = tf.fill([3, 3], 14.88)
+print(filling_tensor)
+
+#Задание списка с заданными интервалами
+range_tensor = tf.range(1, 10, 0.5)
+print(range_tensor)
+
+#ГЕНЕРАЦИЯ С СЛУЧАЙНЫМИ ЗНАЧЕНИЯМИ
+#Нормальное распределение
+normal_random = tf.random.normal((3, 3), 0, 0.1)
+print(normal_random)
+
+#Случайные значения в диапозоне
+range_random = tf.random.uniform((1,10), 0, 10)
+print(range_random)
+
+#Случайные значение с seedом
+tf.random.set_seed(282)
+a = tf.random.normal((1, 3), 0, 0.1)
 print(a)
+tf.random.set_seed(282)
+b = tf.random.normal((1, 3), 0, 0.1)
 print(b)
-print(c)
-print(a_float)
-#Преобразование тензора в вектор numpy
-b_numpy = np.array(b)
-print(b_numpy)
 
-#Задавать изменяемые тензоры можно с помощью Variable
-v1 = tf.Variable(c)
-v2 = tf.Variable([1, 1])
-print(v1)
+#МАТЕМАТИЧЕСКИЕ ФУНКЦИИ
+#Сложение тензоров
+tensor_sum = tf.add(a, b)                   #Можно просто a + b
+print('Сумма двух тензоров: ', tensor_sum.numpy())
 
-#Изменять тензоры можно с помощью assign_add(sub)
-v2.assign([0, 0])               #Добавление
-print(v2)
+#Вычитание тензоров
+tensor_sub = tf.subtract(tensor_sum, b)     #Можно просто tensor_sum - b
+print('Разница двух тензоров: ', tensor_sub.numpy())
 
-v3 = tf.Variable([1, 2, 3, 4, 5])
-v3.assign_sub([5, 4, 3, 2, 1])  #Вычитание
-print(v3)
-print('Размерность тензора', v3.shape)
+#Деление тензоров поэлиментно
+div_tensor = tf.divide(tensor_sum, a)       #Можно просто через tensor_sum / a
+print(div_tensor.numpy())
 
-#Срезы в TF, но без копирования информации - это один объект
-val_0 = v3[1:3]
-val_0.assign(10)
-print(val_0)
-print(v3)
+#Умножение тезоров поэлиментно
+mult_tensor = tf.multiply(tensor_sum, b)    #Можно просто через tensor_sum * b
+print(mult_tensor)
 
-#Списочное индексирование
-x = tf.constant(range(10)) + 5
-#Новый тензор сформирован на основе другого
-x_indx = tf.gather(x, [0, 4])
-print(x, x_indx, sep='\n')
+#Возведение в степень
+print(div_tensor**5)
 
-#Индексы как обращение к строке и столбцу
-val_indx = c[(1)]
-print(val_indx)
+#Внешнее векторное умножение
+mult_tensor_external = tf.tensordot(mult_tensor, b, axes=0)
+print(mult_tensor_external)
 
-#Индексы как обращение к строке и столбцу
-val_indx = c[(1, 1)]
-print(val_indx)
+#Перемножение матрицы
+first_matrix = tf.constant(tf.range(1, 10), shape=(3, 3))
+second_matrix = tf.constant(tf.range(10, 19), shape=(3, 3))
+mult_matrix = tf.matmul(first_matrix, second_matrix)    #first_matrix @ second_matrix
+print(mult_matrix)
 
-#Взять все вторые элементы в каждом столбце
-values_2 = c[:, 1]  #start:stop:step
-print(values_2)
+#Сумма элементов
+element_sum = tf.reduce_sum(mult_matrix, axis=1)
+print(element_sum)
 
-#Изменение размерности тензора, но новый тензор не создает
-#Должна сохраняться размерность в двух тензорах
-a = tf.constant(range(30))
-b = tf.reshape(a, [5, 6])
-reshape_tensor = tf.reshape(a, [6, -1])
-print(a)
-print(b.numpy())
-print(reshape_tensor.numpy())
+#Поиск минимума и маскимума axis - по столбцам
+min_item = tf.reduce_min(mult_matrix)
+print('Минимальный элемент из тензора: ', min_item)
+max_item = tf.reduce_max(mult_matrix)
+print('Максимальный элемент из тензора: ', max_item)
 
-#Для транспонирования можем использовать transpose
-reshape_tensor_T = tf.transpose(reshape_tensor, perm=[1, 0])
-print(reshape_tensor_T.numpy())
+#Вычисление произведения всей матрицы
+mult_elements = tf.reduce_prod(first_matrix)
+print(mult_elements)
+
+#Возведение каждого элемента в квадрат
+sqrt_matrix = tf.square(first_matrix)       #a ** 2
+print(sqrt_matrix)
+
+#Тригонометрические функции
+cos_of_tensor = tf.cos(tf.range(-math.pi, math.pi, 1))
+print(cos_of_tensor)
+
+#Так же очень много функций в tf.keras...
