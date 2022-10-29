@@ -3,9 +3,10 @@ import tensorflow as tf
 #Класс описывающий модель полносвязного слоя нейроной сети
 class DenseNN(tf.Module):
     #Конструктор в котором определяется количество выходов
-    def __init__(self, outputs):
+    def __init__(self, outputs, activate='relu'):
         super().__init__()
         self.outputs = outputs
+        self.activate = activate
         self.fl_init = False
 
     #Функтор, который позволить экземпляер класса вызывать как
@@ -21,4 +22,11 @@ class DenseNN(tf.Module):
             self.b = tf.Variable(self.b)
             self.fl_init = True
         y = x @ self.w + self.b
+
+        #Пропускание сум черех функции активации
+        if self.activate == 'relu':
+            return tf.nn.relu(y)
+        elif self.activate == 'softmax':
+            return tf.nn.softmax(y)
+
         return y

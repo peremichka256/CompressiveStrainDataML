@@ -1,38 +1,73 @@
 import os
+
+import keras.utils
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import tensorflow as tf
-import matplotlib.pyplot as plt
+import keras.datasets.mnist as mnist
 from DenseNN import DenseNN
 
-#В машинном обучении задачу поиска решения можно
-# представить в форме модели, которая должна коректно
-# отобразить вход на выходы. Модель - это чаще всего нейронная сеть
-model = DenseNN(1)
-#print(model(tf.constant([[1.0, 2.0]]))) - неверно
-#Чтобы обучить нейронную сеть нужно определить
-# множество обучающей выборки
-x_train = tf.random.uniform(minval=0, maxval=10, shape=(100, 2))
-y_train = [a + b for a, b in x_train]
+def model_predict(x):
+    y = layer_1(x)
+    y = layer_2(y)
+    return y
 
-#Определение функции потерь и оптимизатор для
-# градиентного спуска
-loss = lambda x, y: tf.reduce_mean(tf.square(x-y))
-opt = tf.optimizers.Adam(learning_rate=0.01)
+if __name__ == '__main__':
+    # Загрузка данных для обучения
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-#Реализация алгоритма обучения
-EPOCHS = 50
-for n in range(EPOCHS):
-    for x, y in zip(x_train, y_train):
-        x = tf.expand_dims(x, axis=0)
-        y = tf.constant(y, shape=(1, 1))
+    # Нормирование данных
+    x_train = x_train / 255
+    x_test = x_test / 255
 
-        with tf.GradientTape() as tape:
-            f_loss = loss(y, model(x))
+    # Вытягивание изображение в единый вектор
+    x_train = tf.reshape(tf.cast(x_train, tf.float32), [-1, 28 * 28])
+    x_test = tf.reshape(tf.cast(x_test, tf.float32), [-1, 28 * 28])
 
-        grads = tape.gradient(f_loss, model.trainable_variables)
-        opt.apply_gradients(zip(grads, model.trainable_variables))
+    # Преобразование в one hot vector
+    y_train = keras.utils.to_categorical(y_train, 10)
 
-    print(f_loss.numpy())
+    # Создание слоев
+    # Первый слой
+    layer_1 = DenseNN(128)
+    # Выходной слой
+    layer_2 = DenseNN(10, activate='softmax')
 
-print(model.trainable_variables)
-print(model(tf.constant([[1.0, 2.0]])))
+    #Обучение сети(нахождение весовых коэффициентов
+    # с помощью градиентного спуска)
+    #функция потерь
+    cross_entropy = lambda y_true, y_pred: tf.reduce_mean(
+        tf.losses.categorical_crossentropy(y_true, y_pred))
+    #Оптимизатор для градиентого спуска
+    opt = tf.optimizers.Adam(learning_rate=0.001)
+
+    BATCH_SIZE = 32
+    EPOCHS = 10
+    TOTAL = x_train.shape[0]
+
+    #Разбивка обучающей выборки на батчи
+    train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+    train_dataset = train_dataset.shuffle(buffer_size=1024).batch(BATCH_SIZE)
+
+    for n in range(EPOCHS):
+        #Суммарное значение потерь
+        loss = 0
+        for x_batch, y_batch in train_dataset:
+            with tf.GradientTape() as tape:
+                f_loss = cross_entropy(y_batch, model_predict(x_batch))
+
+            loss += f_loss
+            #Определяем градиенты
+            grads = tape.gradient(f_loss, [layer_1.trainable_variables, layer_2.trainable_variables])
+            #Применяем их к обучаемым параметрам первого и второго слоя
+            opt.apply_gradients(zip(grads[0], layer_1.trainable_variables))
+            opt.apply_gradients(zip(grads[1], layer_2.trainable_variables))
+
+        print(loss.numpy())
+
+    #Определение качества
+    y = model_predict(x_test)
+    y2 = tf.argmax(y, axis=1).numpy()
+    acc = len(y_test[y_test == y2]) / y_test.shape[0] * 100
+    print(acc)
