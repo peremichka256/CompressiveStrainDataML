@@ -5,6 +5,7 @@ class DenseLayer(tf.keras.layers.Layer):
     #Units - количество нейронов в полносвязном слое
     def __init__(self, units=1):
         super().__init__()
+        #Кол-во нейронов
         self.units = units
 
     #Вызывается для инициализации весовых коэффициентов
